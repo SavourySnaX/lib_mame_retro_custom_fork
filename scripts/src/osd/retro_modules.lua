@@ -69,6 +69,7 @@ function osdmodulesbuild()
 		MAME_DIR .. "src/osd/modules/lib/osdobj_common.h",
 		MAME_DIR .. "src/osd/modules/diagnostics/none.cpp",
 		MAME_DIR .. "src/osd/modules/debugger/none.cpp",
+		MAME_DIR .. "src/osd/modules/debugger/libretro.cpp",
 		MAME_DIR .. "src/osd/modules/font/font_none.cpp",
 		MAME_DIR .. "src/osd/modules/netdev/taptun.cpp",
 		MAME_DIR .. "src/osd/modules/netdev/pcap.cpp",

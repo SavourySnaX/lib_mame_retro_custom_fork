@@ -277,7 +277,7 @@ void osd_common_t::register_options()
 #endif
 #ifndef NO_USE_PULSEAUDIO
 	REGISTER_MODULE(m_mod_man, SOUND_PULSEAUDIO);
-#endif 
+#endif
 #else
 	REGISTER_MODULE(m_mod_man, SOUND_RETRO);
 #endif
@@ -304,6 +304,7 @@ void osd_common_t::register_options()
 #endif
 #else
 	REGISTER_MODULE(m_mod_man, DEBUG_NONE);
+	REGISTER_MODULE(m_mod_man, DEBUG_LIBRETRO);
 #endif
 
 #ifndef __LIBRETRO__

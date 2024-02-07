@@ -655,6 +655,10 @@ static int execute_game(char *path)
             Add_Option(MsystemName);
             Add_Option((char*)mediaType);
             Add_Option((char*)gameName);
+
+			Add_Option("-debug");	// TODO allow these to be passed across
+			Add_Option("-debugger");
+			Add_Option("libretro");
          }
       }
    }
