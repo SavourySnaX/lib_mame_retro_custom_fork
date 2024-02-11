@@ -124,6 +124,7 @@ extern retro_log_printf_t log_cb;
 extern retro_environment_t environ_cb;
 extern retro_input_state_t input_state_cb;
 extern retro_input_poll_t input_poll_cb;
+extern retro_debugger_t debugger_cb;
 
 extern void retro_keyboard_event(bool, unsigned, uint32_t, uint16_t);
 

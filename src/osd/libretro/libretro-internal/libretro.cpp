@@ -119,6 +119,8 @@ retro_input_poll_t input_poll_cb = NULL;
 retro_video_refresh_t video_cb = NULL;
 retro_audio_sample_batch_t audio_batch_cb = NULL;
 
+retro_debugger_t debugger_cb = NULL;   // Extension, configured via Environment request
+
 void retro_set_input_state(retro_input_state_t cb) { input_state_cb = cb; }
 void retro_set_input_poll(retro_input_poll_t cb) { input_poll_cb = cb; }
 void retro_set_video_refresh(retro_video_refresh_t cb) { video_cb = cb; }
@@ -748,6 +750,13 @@ void retro_init(void)
        * in case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY
        * is not implemented by the frontend. */
       retro_save_directory = retro_system_directory;
+   }
+
+   retro_debugger_t debugger_callback;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_DEBUGGER_INTERFACE, &debugger_callback))
+   {
+      debugger_cb=debugger_callback;
+	  log_cb(RETRO_LOG_DEBUG, "debugger_cb : %p\n", debugger_cb);
    }
 
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))

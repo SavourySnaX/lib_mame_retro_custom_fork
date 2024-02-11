@@ -1849,6 +1849,13 @@ enum retro_mod
                                             * not for individual peripherals like controllers.
                                             */
 
+#define RETRO_ENVIRONMENT_GET_DEBUGGER_INTERFACE (999 | RETRO_ENVIRONMENT_EXPERIMENTAL)
+                                             /* retro_debugger_t** 
+                                              *
+                                              * Returns a retro_debugger_t callback that can be used to retrieve/perform debugger
+                                              *related actions
+                                              */
+
 /* VFS functionality */
 
 /* File paths:
@@ -2401,6 +2408,9 @@ struct retro_log_callback
 {
    retro_log_printf_t log;
 };
+
+typedef void* (RETRO_CALLCONV *retro_debugger_t)(int data_request,void* data);
+
 
 /* Performance related functions */
 
