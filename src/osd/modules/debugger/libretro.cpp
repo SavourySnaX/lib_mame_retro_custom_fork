@@ -27,6 +27,18 @@ namespace osd {
 
 namespace {
 
+class debug_libretro;
+
+struct retro_debug_view_t
+{
+	debug_libretro* _this;
+	const char* expression;
+	debug_view* view;
+	int kind;
+	int x, y;
+	int w, h;
+};
+
 class debug_libretro : public osd_module, public debug_module
 {
 public:
@@ -36,9 +48,6 @@ public:
 		main_cpu(nullptr),
 		main_memory(nullptr),
 		program_address_space(nullptr),
-		m_disasm_view(nullptr),
-		m_register_view(nullptr),
-		m_memory_view(nullptr),
 		m_initialised(false)
 	{
 	}
@@ -56,7 +65,9 @@ public:
 	virtual void debugger_update() override;
 
 	// debugger callbacks
-	const debug_view_char* requestViewData(int x, int y, int w, int h, int kind, const char* expression);
+	retro_debug_view_t* viewAllocData(int kind);
+	void viewFreeData(retro_debug_view_t* view);
+	const debug_view_char* requestViewData(const retro_debug_view_t* view);
 	const char* remoteCommandData(const char* command);
 private:
 	void initialise();
@@ -67,11 +78,6 @@ private:
     device_memory_interface* main_memory;
     address_space *program_address_space;
 
-    debug_view_disasm* m_disasm_view;
-    debug_view* m_register_view;
-	debug_view_memory* m_memory_view;
-
-	
 	bool m_initialised;
 };
 
@@ -82,7 +88,9 @@ void debug_libretro::init_debugger(running_machine &machine)
 
 struct debugger_view_t
 {
-	const debug_view_char* (* Callback)(debug_libretro*,int,int,int,int,int,const char*);
+	retro_debug_view_t* (* AllocCallback)(debug_libretro*,int kind);
+	void (* FreeCallback)(debug_libretro*,retro_debug_view_t* view);
+	const debug_view_char* (* Update)(debug_libretro*,retro_debug_view_t* view);
 	debug_libretro* _this;
 };
 
@@ -92,9 +100,19 @@ struct debugger_command_t
 	debug_libretro* _this;
 };
 
-static const debug_view_char* viewRequest(debug_libretro* _this,int x,int y, int w, int h, int kind, const char* expr)
+static retro_debug_view_t* viewAlloc(debug_libretro* _this,int kind)
 {
-	return _this->requestViewData(x,y,w,h,kind,expr);
+	return _this->viewAllocData(kind);
+}
+
+static void viewFree(debug_libretro* _this,retro_debug_view_t* view)
+{
+	_this->viewFreeData(view);
+}
+
+static const debug_view_char* viewRequest(debug_libretro* _this,retro_debug_view_t* view)
+{
+	return _this->requestViewData(view);
 }
 
 static const char* remoteCommand(debug_libretro* _this, const char* command)
@@ -114,17 +132,11 @@ void debug_libretro::initialise()
 	main_memory = &main_cpu->memory();
 	program_address_space = &main_memory->space(AS_PROGRAM);
 
-	auto disasm_view = m_machine->debug_view().alloc_view(DVT_DISASSEMBLY, nullptr, this);
-	m_disasm_view=downcast<debug_view_disasm*>(disasm_view);
-	m_disasm_view->set_expression("curpc");
-	m_register_view = m_machine->debug_view().alloc_view(DVT_STATE, nullptr, this);
-	auto memory_view = m_machine->debug_view().alloc_view(DVT_MEMORY,nullptr,this);
-	m_memory_view=downcast<debug_view_memory*>(memory_view);
-	m_memory_view->set_expression("curpc");
-
 	{
 		debugger_view_t t;
-		t.Callback=viewRequest;
+		t.AllocCallback=viewAlloc;
+		t.FreeCallback=viewFree;
+		t.Update=viewRequest;
 		t._this=this;
 		debugger_cb(0,&t);
 	}
@@ -156,34 +168,45 @@ void debug_libretro::wait_for_debugger(device_t &device, bool firststop)
 	device.machine().osd().update(false);	// do refresh
 	osd_sleep(osd_ticks_per_second() / 10);	// short delay 
 }
-//change me, request view should allocate and return a view ..
-const debug_view_char* debug_libretro::requestViewData(int x, int y, int w, int h, int kind, const char* viewExpression)
+
+retro_debug_view_t* debug_libretro::viewAllocData(int kind)
 {
-	debug_view* view;
-	switch (kind)	
+	retro_debug_view_t* view = new retro_debug_view_t();
+	view->_this = this;
+	view->kind = kind;
+	view->view = m_machine->debug_view().alloc_view((debug_view_type)kind, nullptr, this);
+	return view;
+}
+
+void debug_libretro::viewFreeData(retro_debug_view_t* view)
+{
+	m_machine->debug_view().free_view(*(view->view));
+	delete view;
+}
+
+const debug_view_char* debug_libretro::requestViewData(const retro_debug_view_t* view)
+{
+	debug_view* v = view->view;
+	switch (view->kind)
 	{
-		case 0:
-			m_disasm_view->set_expression(viewExpression);
-			view=m_disasm_view;
+		case DVT_DISASSEMBLY:
+			downcast<debug_view_disasm*>(v)->set_expression(view->expression);
 			break;
-		case 1:
-			view=m_register_view;
-			break;
-		case 2:
-			view=m_memory_view;
+		case DVT_MEMORY:
+			downcast<debug_view_memory*>(v)->set_expression(view->expression);
 			break;
 		default:
-			return nullptr;
+			break;
 	}
-    debug_view_xy vsize;
-    vsize.x = w;
-    vsize.y = h;
-    view->set_visible_size(vsize);
-    debug_view_xy vpos;
-    vpos.x = x;
-    vpos.y = y;
-    view->set_visible_position(vpos);
- 	return view->viewdata();
+	debug_view_xy vsize;
+	vsize.x = view->w;
+	vsize.y = view->h;
+	v->set_visible_size(vsize);
+	debug_view_xy vpos;
+	vpos.x = view->x;
+	vpos.y = view->y;
+	v->set_visible_position(vpos);
+	return v->viewdata();
 }
 
 const char* debug_libretro::remoteCommandData(const char* command)
