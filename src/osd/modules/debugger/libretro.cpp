@@ -27,6 +27,30 @@ namespace osd {
 
 namespace {
 
+enum FormatSwitch
+{
+	AsmRightColumnNone=0x0000,
+	AsmRightColumnRawOpcodes=0x0001,
+	AsmRightColumnEncyptedOpcodes=0x0002,
+	AsmRightColumnComments=0x0003,
+	DataFormat1ByteHex=0x1000,
+	DataFormat2ByteHex=0x1001,
+	DataFormat4ByteHex=0x1002,
+	DataFormat8ByteHex=0x1003,
+	DataFormat1ByteOctal=0x1004,
+	DataFormat2ByteOctal=0x1005,
+	DataFormat4ByteOctal=0x1006,
+	DataFormat8ByteOctal=0x1007,
+	DataFormat32BitFloat=0x1008,
+	DataFormat64BitFloat=0x1009,
+	DataFormat80BitFloat=0x100A,
+	HexAddress=0x2000,
+	DecAddress=0x2001,
+	OctAddress=0x2002,
+	LogicalAddress=0x3000,
+	PhysicalAddress=0x3001,
+};
+
 class debug_libretro;
 
 struct retro_debug_view_t
@@ -69,6 +93,7 @@ public:
 	void viewFreeData(retro_debug_view_t* view);
 	const debug_view_char* requestViewData(const retro_debug_view_t* view);
 	void updateFromExpressionData(retro_debug_view_t* view);
+	void viewDataFormatData(const retro_debug_view_t* view, FormatSwitch format);
 	const char* remoteCommandData(const char* command);
 private:
 	void initialise();
@@ -94,6 +119,7 @@ struct debugger_view_t
 	const debug_view_char* (* Update)(debug_libretro*,retro_debug_view_t* view);
 	void (* ProcessChar)(debug_libretro*,retro_debug_view_t* view, int key);
 	void (* UpdateExpression)(debug_libretro*,retro_debug_view_t* view);
+	void (* DataFormat)(debug_libretro*,retro_debug_view_t* view, int format);
 	debug_libretro* _this;
 };
 
@@ -128,6 +154,11 @@ static void viewProcessChar(debug_libretro* _this, retro_debug_view_t* view, int
 	view->view->process_char(key);
 }
 
+static void viewDataFormat(debug_libretro* _this, retro_debug_view_t* view, int format)
+{
+	_this->viewDataFormatData(view,(FormatSwitch)format);
+}
+
 static const char* remoteCommand(debug_libretro* _this, const char* command)
 {
 	return _this->remoteCommandData(command);
@@ -152,6 +183,7 @@ void debug_libretro::initialise()
 		t.Update=viewRequest;
 		t.UpdateExpression=viewUpdateFromExpression;
 		t.ProcessChar=viewProcessChar;
+		t.DataFormat=viewDataFormat;
 		t._this=this;
 		debugger_cb(0,&t);
 	}
@@ -218,6 +250,75 @@ void debug_libretro::updateFromExpressionData(retro_debug_view_t* view)
 		v->set_cursor_visible(true);
 		view->y=v->visible_position().y;
 		v->set_cursor_position(debug_view_xy(view->x,view->y));
+	}
+}
+
+void debug_libretro::viewDataFormatData(const retro_debug_view_t* view, FormatSwitch format)
+{
+	auto v=view->view;
+
+	switch (format)
+	{
+		case AsmRightColumnComments:
+			downcast<debug_view_disasm*>(v)->set_right_column(DASM_RIGHTCOL_COMMENTS);
+			break;
+		case AsmRightColumnEncyptedOpcodes:
+			downcast<debug_view_disasm*>(v)->set_right_column(DASM_RIGHTCOL_ENCRYPTED);
+			break;
+		case AsmRightColumnRawOpcodes:
+			downcast<debug_view_disasm*>(v)->set_right_column(DASM_RIGHTCOL_RAW);
+			break;
+		case AsmRightColumnNone:
+			downcast<debug_view_disasm*>(v)->set_right_column(DASM_RIGHTCOL_NONE);
+			break;
+		case DataFormat1ByteHex:
+			downcast<debug_view_memory*>(v)->set_data_format(debug_view_memory::data_format::HEX_8BIT);
+			break;
+		case DataFormat2ByteHex:
+			downcast<debug_view_memory*>(v)->set_data_format(debug_view_memory::data_format::HEX_16BIT);
+			break;
+		case DataFormat4ByteHex:
+			downcast<debug_view_memory*>(v)->set_data_format(debug_view_memory::data_format::HEX_32BIT);
+			break;
+		case DataFormat8ByteHex:
+			downcast<debug_view_memory*>(v)->set_data_format(debug_view_memory::data_format::HEX_64BIT);
+			break;
+		case DataFormat1ByteOctal:
+			downcast<debug_view_memory*>(v)->set_data_format(debug_view_memory::data_format::OCTAL_8BIT);
+			break;
+		case DataFormat2ByteOctal:
+			downcast<debug_view_memory*>(v)->set_data_format(debug_view_memory::data_format::OCTAL_16BIT);
+			break;
+		case DataFormat4ByteOctal:
+			downcast<debug_view_memory*>(v)->set_data_format(debug_view_memory::data_format::OCTAL_32BIT);
+			break;
+		case DataFormat8ByteOctal:
+			downcast<debug_view_memory*>(v)->set_data_format(debug_view_memory::data_format::OCTAL_64BIT);
+			break;
+		case DataFormat32BitFloat:
+			downcast<debug_view_memory*>(v)->set_data_format(debug_view_memory::data_format::FLOAT_32BIT);
+			break;
+		case DataFormat64BitFloat:
+			downcast<debug_view_memory*>(v)->set_data_format(debug_view_memory::data_format::FLOAT_64BIT);
+			break;
+		case DataFormat80BitFloat:
+			downcast<debug_view_memory*>(v)->set_data_format(debug_view_memory::data_format::FLOAT_80BIT);
+			break;
+		case HexAddress:
+			downcast<debug_view_memory*>(v)->set_address_radix(16);
+			break;
+		case DecAddress:
+			downcast<debug_view_memory*>(v)->set_address_radix(10);
+			break;
+		case OctAddress:
+			downcast<debug_view_memory*>(v)->set_address_radix(8);
+			break;
+		case LogicalAddress:
+			downcast<debug_view_memory*>(v)->set_physical(false);
+			break;
+		case PhysicalAddress:
+			downcast<debug_view_memory*>(v)->set_physical(true);
+			break;
 	}
 }
 
