@@ -68,6 +68,7 @@ public:
 	retro_debug_view_t* viewAllocData(int kind);
 	void viewFreeData(retro_debug_view_t* view);
 	const debug_view_char* requestViewData(const retro_debug_view_t* view);
+	void updateFromExpressionData(retro_debug_view_t* view);
 	const char* remoteCommandData(const char* command);
 private:
 	void initialise();
@@ -91,6 +92,8 @@ struct debugger_view_t
 	retro_debug_view_t* (* AllocCallback)(debug_libretro*,int kind);
 	void (* FreeCallback)(debug_libretro*,retro_debug_view_t* view);
 	const debug_view_char* (* Update)(debug_libretro*,retro_debug_view_t* view);
+	void (* ProcessChar)(debug_libretro*,retro_debug_view_t* view, int key);
+	void (* UpdateExpression)(debug_libretro*,retro_debug_view_t* view);
 	debug_libretro* _this;
 };
 
@@ -115,6 +118,16 @@ static const debug_view_char* viewRequest(debug_libretro* _this,retro_debug_view
 	return _this->requestViewData(view);
 }
 
+static void viewUpdateFromExpression(debug_libretro* _this, retro_debug_view_t* view)
+{
+	_this->updateFromExpressionData(view);
+}
+
+static void viewProcessChar(debug_libretro* _this, retro_debug_view_t* view, int key)
+{
+	view->view->process_char(key);
+}
+
 static const char* remoteCommand(debug_libretro* _this, const char* command)
 {
 	return _this->remoteCommandData(command);
@@ -137,6 +150,8 @@ void debug_libretro::initialise()
 		t.AllocCallback=viewAlloc;
 		t.FreeCallback=viewFree;
 		t.Update=viewRequest;
+		t.UpdateExpression=viewUpdateFromExpression;
+		t.ProcessChar=viewProcessChar;
 		t._this=this;
 		debugger_cb(0,&t);
 	}
@@ -183,8 +198,8 @@ void debug_libretro::viewFreeData(retro_debug_view_t* view)
 	m_machine->debug_view().free_view(*(view->view));
 	delete view;
 }
-
-const debug_view_char* debug_libretro::requestViewData(const retro_debug_view_t* view)
+	
+void debug_libretro::updateFromExpressionData(retro_debug_view_t* view)
 {
 	debug_view* v = view->view;
 	switch (view->kind)
@@ -198,14 +213,21 @@ const debug_view_char* debug_libretro::requestViewData(const retro_debug_view_t*
 		default:
 			break;
 	}
+	if(v->cursor_supported())
+	{
+		v->set_cursor_visible(true);
+		view->y=v->visible_position().y;
+		v->set_cursor_position(debug_view_xy(view->x,view->y));
+	}
+}
+
+const debug_view_char* debug_libretro::requestViewData(const retro_debug_view_t* view)
+{
+	debug_view* v = view->view;
 	debug_view_xy vsize;
 	vsize.x = view->w;
 	vsize.y = view->h;
 	v->set_visible_size(vsize);
-	debug_view_xy vpos;
-	vpos.x = view->x;
-	vpos.y = view->y;
-	v->set_visible_position(vpos);
 	return v->viewdata();
 }
 
