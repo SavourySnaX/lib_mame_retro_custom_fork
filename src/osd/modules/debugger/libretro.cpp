@@ -94,6 +94,10 @@ public:
 	const debug_view_char* requestViewData(const retro_debug_view_t* view);
 	void updateFromExpressionData(retro_debug_view_t* view);
 	void viewDataFormatData(const retro_debug_view_t* view, FormatSwitch format);
+	int viewDataSourcesGetCountData(const retro_debug_view_t* view);
+	const char* viewDataSourcesGetNameData(const retro_debug_view_t* view, int index);
+	void viewDataSourcesSetIndexData(retro_debug_view_t* view, int index);
+	int viewDataSourcesData(const retro_debug_view_t* view, const char** sources);
 	const char* remoteCommandData(const char* command);
 private:
 	void initialise();
@@ -120,6 +124,9 @@ struct debugger_view_t
 	void (* ProcessChar)(debug_libretro*,retro_debug_view_t* view, int key);
 	void (* UpdateExpression)(debug_libretro*,retro_debug_view_t* view);
 	void (* DataFormat)(debug_libretro*,retro_debug_view_t* view, int format);
+	int (* DataSourcesGetCount)(debug_libretro*,const retro_debug_view_t* view);
+	const char* (* DataSourcesGetName)(debug_libretro*,const retro_debug_view_t* view, int index);
+	void (* DataSourcesSetIndex)(debug_libretro*,retro_debug_view_t* view, int index);
 	debug_libretro* _this;
 };
 
@@ -159,6 +166,22 @@ static void viewDataFormat(debug_libretro* _this, retro_debug_view_t* view, int 
 	_this->viewDataFormatData(view,(FormatSwitch)format);
 }
 
+static int viewDataSourcesGetCount(debug_libretro* _this,const retro_debug_view_t* view)
+{
+	return _this->viewDataSourcesGetCountData(view);
+}
+
+static const char* viewDataSourcesGetName(debug_libretro* _this,const retro_debug_view_t* view, int index)
+{
+	return _this->viewDataSourcesGetNameData(view,index);
+
+}
+
+static void viewDataSourcesSetIndex(debug_libretro* _this,retro_debug_view_t* view, int index)
+{
+	_this->viewDataSourcesSetIndexData(view,index);
+}
+
 static const char* remoteCommand(debug_libretro* _this, const char* command)
 {
 	return _this->remoteCommandData(command);
@@ -184,6 +207,9 @@ void debug_libretro::initialise()
 		t.UpdateExpression=viewUpdateFromExpression;
 		t.ProcessChar=viewProcessChar;
 		t.DataFormat=viewDataFormat;
+		t.DataSourcesGetCount=viewDataSourcesGetCount;
+		t.DataSourcesGetName=viewDataSourcesGetName;
+		t.DataSourcesSetIndex=viewDataSourcesSetIndex;
 		t._this=this;
 		debugger_cb(0,&t);
 	}
@@ -330,6 +356,21 @@ const debug_view_char* debug_libretro::requestViewData(const retro_debug_view_t*
 	vsize.y = view->h;
 	v->set_visible_size(vsize);
 	return v->viewdata();
+}
+
+int debug_libretro::viewDataSourcesGetCountData(const retro_debug_view_t* view)
+{
+	return view->view->source_count();
+}
+
+const char* debug_libretro::viewDataSourcesGetNameData(const retro_debug_view_t* view, int index)
+{
+	return view->view->source(index)->name();
+}
+
+void debug_libretro::viewDataSourcesSetIndexData(retro_debug_view_t* view, int index)
+{
+	view->view->set_source(*(view->view->source(index)));
 }
 
 const char* debug_libretro::remoteCommandData(const char* command)
