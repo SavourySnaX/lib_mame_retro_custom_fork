@@ -13,3 +13,12 @@ steps:
 - script: |
     make -f Makefile.libretro -j3
   displayName: 'make'
+
+- task: CopyFiles@2
+  inputs:
+    contents: 'mame_libretro.so'
+    targetFolder: $(Build.ArtifactStagingDirectory)
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathToPublish: $(Build.ArtifactStagingDirectory)
+    artifactName: ubuntu-x64-mame-libretro
