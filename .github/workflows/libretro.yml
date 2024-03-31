@@ -1,0 +1,20 @@
+name: Build
+on: push
+  
+jobs:
+ build:
+  runs-on: self-hosted
+  steps:
+#  - uses: actions/checkout@v4
+#  - name: build
+#    run: make -f Makefile.libretro -j 16
+#  - uses: actions/upload-artifact@v4
+#    with:
+#      name: build
+#      path: mame_libretro.so
+  - name: clean
+    run: git clean -xdf
+  - name: Install mingw
+    run: apt-get -y install mingw-w64 mingw-w64-x86-64-dev g++-mingw-w64-x86-64 gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 
+  - name: Build windows
+    run: TARGETOS=windows PTR64=1 OVERRIDE_CC=x86_64-w64-mingw32-gcc-posix OVERRIDE_CXX=x86_64-w64-mingw32-g++-posix OVERRIDE_LD=x86_64-w64-mingw32-ld MINGW64=/usr make -f Makefile.libretro -j 16
