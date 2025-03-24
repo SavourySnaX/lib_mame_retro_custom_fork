@@ -136,6 +136,11 @@ struct debugger_command_t
 	debug_libretro* _this;
 };
 
+struct debugger_notification_t
+{
+	int32_t stopped;
+};
+
 static retro_debug_view_t* viewAlloc(debug_libretro* _this,int kind)
 {
 	return _this->viewAllocData(kind);
@@ -238,8 +243,12 @@ void debug_libretro::wait_for_debugger(device_t &device, bool firststop)
 
 	m_machine->debugger().console().get_visible_cpu()->debug()->go();*/
 
+	debugger_notification_t t;
+	t.stopped = m_machine->debugger().cpu().is_stopped();
+	debugger_cb(2,&t);
+
 	device.machine().osd().update(false);	// do refresh
-	osd_sleep(osd_ticks_per_second() / 10);	// short delay 
+	osd_sleep(osd_ticks_per_second() / 10);	// short delay
 }
 
 retro_debug_view_t* debug_libretro::viewAllocData(int kind)
@@ -256,7 +265,7 @@ void debug_libretro::viewFreeData(retro_debug_view_t* view)
 	m_machine->debug_view().free_view(*(view->view));
 	delete view;
 }
-	
+
 void debug_libretro::updateFromExpressionData(retro_debug_view_t* view)
 {
 	debug_view* v = view->view;
@@ -399,6 +408,10 @@ void debug_libretro::debugger_update()
 	{
 		return;
 	}
+
+	debugger_notification_t t;
+	t.stopped = m_machine->debugger().cpu().is_stopped();
+	debugger_cb(2,&t);
 }
 
 } // anonymous namespace
