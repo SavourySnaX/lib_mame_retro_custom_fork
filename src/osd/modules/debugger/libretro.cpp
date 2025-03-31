@@ -192,6 +192,9 @@ static const char* remoteCommand(debug_libretro* _this, const char* command)
 	return _this->remoteCommandData(command);
 }
 
+typedef void (*thread_pump_t)();
+thread_pump_t thread_pump;
+
 void debug_libretro::initialise()
 {
 	if (debugger_cb==nullptr)
@@ -223,6 +226,9 @@ void debug_libretro::initialise()
 		t.Callback=remoteCommand;
 		t._this=this;
 		debugger_cb(1,&t);
+	}
+	{
+		thread_pump=(thread_pump_t)debugger_cb(3,nullptr);
 	}
 
 	m_initialised = true;
@@ -412,6 +418,7 @@ void debug_libretro::debugger_update()
 	debugger_notification_t t;
 	t.stopped = m_machine->debugger().cpu().is_stopped();
 	debugger_cb(2,&t);
+	thread_pump();
 }
 
 } // anonymous namespace
