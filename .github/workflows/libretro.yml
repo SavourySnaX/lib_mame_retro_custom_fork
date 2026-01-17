@@ -21,7 +21,7 @@ jobs:
   - name: clean
     run: git clean -xdf
   - name: build linux
-    run: make -f Makefile.libretro -j 16
+    run: LDFLAGS=-fuse-ld=lld make -f Makefile.libretro -j 16
   - uses: actions/upload-artifact@v4
     with:
       name: build_linux
