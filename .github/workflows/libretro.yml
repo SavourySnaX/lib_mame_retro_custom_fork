@@ -12,7 +12,7 @@ jobs:
     run: make -f Makefile.libretro -j 16
   - uses: actions/upload-artifact@v4
     with:
-      name: build_linux
+      name: build_linux_x64
       path: mame_libretro.so
  build-Arm64-Linux:
   runs-on: [self-hosted, Linux, ARM64]
@@ -24,7 +24,7 @@ jobs:
     run: LDFLAGS=-fuse-ld=lld make -f Makefile.libretro -j 16
   - uses: actions/upload-artifact@v4
     with:
-      name: build_linux
+      name: build_linux_arm64
       path: mame_libretro.so
  build-X64-Windows:
   runs-on: [self-hosted, Linux, X64]
@@ -38,7 +38,7 @@ jobs:
     run: TARGETOS=windows PTR64=1 OVERRIDE_CC=x86_64-w64-mingw32-gcc-posix OVERRIDE_CXX=x86_64-w64-mingw32-g++-posix OVERRIDE_LD=x86_64-w64-mingw32-ld MINGW64=/usr make -f Makefile.libretro -j 16
   - uses: actions/upload-artifact@v4
     with:
-      name: build_windows
+      name: build_windows_x64
       path: mame_libretro.dll
  build-Arm64-mac:
   runs-on: [self-hosted, macOS, ARM64]
